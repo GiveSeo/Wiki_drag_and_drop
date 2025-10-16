@@ -83,19 +83,51 @@ jobs:
           echo "📝 설치된 Noto 폰트:"
           fc-list | grep -i "noto.*cjk.*kr" | cut -d: -f2 | sort -u
           
-          # 코드 줄바꿈을 위한 LaTeX 헤더 생성
+          # 완전한 코드 줄바꿈 해결을 위한 LaTeX 헤더 생성
           cat > header.tex << 'EOF'
+          % 코드 블록과 인라인 코드의 줄바꿈 처리
           \usepackage{fvextra}
+          \usepackage{listings}
+          \usepackage{xcolor}
+          
+          % fvextra를 사용한 Verbatim 환경 재정의
+          \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
+            breaklines,
+            breakanywhere,
+            fontsize=\small
+          }
+          
+          % Highlighting 환경 (코드 구문 강조용)
           \DefineVerbatimEnvironment{Highlighting}{Verbatim}{
             breaklines,
             breaksymbolleft={},
             breakanywhere,
-            commandchars=\\\{\}
+            commandchars=\\\{\},
+            fontsize=\small
           }
+          
+          % 인라인 코드(\texttt) 줄바꿈 처리
+          \renewcommand{\texttt}[1]{%
+            \begingroup
+            \ttfamily\small
+            \begingroup\lccode`~=`/\lowercase{\endgroup\def~}{/\discretionary{}{}{}}%
+            \begingroup\lccode`~=`[\lowercase{\endgroup\def~}{[\discretionary{}{}{}}%
+            \begingroup\lccode`~=`.\lowercase{\endgroup\def~}{.\discretionary{}{}{}}%
+            \begingroup\lccode`~=`-\lowercase{\endgroup\def~}{-\discretionary{}{}{}}%
+            \begingroup\lccode`~=`_\lowercase{\endgroup\def~}{_\discretionary{}{}{}}%
+            \catcode`/=\active\catcode`[=\active\catcode`.=\active\catcode`-=\active\catcode`_=\active
+            \scantokens{#1\noexpand}%
+            \endgroup
+          }
+          
+          % 페이지 레이아웃 개선
+          \usepackage{microtype}
+          \usepackage[hang,flushmargin]{footmisc}
           EOF
           
           pandoc combined.md \
             --pdf-engine=xelatex \
+            --listings \
             -V 'mainfont:Noto Sans CJK KR' \
             -V 'sansfont:Noto Sans CJK KR' \
             -V 'monofont:Noto Sans Mono CJK KR' \
@@ -106,7 +138,6 @@ jobs:
             -V documentclass=article \
             --toc \
             --toc-depth=3 \
-            --listings \
             -H header.tex \
             -o combined.pdf
 
