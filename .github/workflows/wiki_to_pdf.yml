@@ -46,9 +46,11 @@ jobs:
             texlive-lang-cjk \
             texlive-latex-extra \
             texlive-lang-chinese \
+            texlive-lang-korean \
             lmodern \
-            fonts-noto-cjk
-          fc-list :lang=ko family | head -5
+            fonts-noto-cjk \
+            fonts-noto-cjk-extra
+          fc-list :lang=ko family | head -10
           echo "✅ Dependencies installed"
 
       - name: Merge Wiki files and download images
@@ -83,41 +85,79 @@ jobs:
           echo "📝 설치된 Noto 폰트:"
           fc-list | grep -i "noto.*cjk.*kr" | cut -d: -f2 | sort -u
           
-          # 코드 줄바꿈 및 이미지 위치 문제 해결을 위한 LaTeX 헤더
+          # 모든 문제 해결을 위한 LaTeX 헤더 생성
           cat > header.tex << 'EOF'
-          % 필수 패키지 로드
+          % ========================================
+          % 1. 한글 및 특수문자 지원 패키지
+          % ========================================
+          \usepackage{fontspec}
+          \usepackage{xeCJK}
+          \usepackage[utf8]{inputenc}
+          
+          % 한글 폰트 설정 (모든 한글 문자 지원)
+          \setCJKmainfont{Noto Sans CJK KR}[
+            UnicodeRange={AC00-D7A3},
+            BoldFont=Noto Sans CJK KR Bold,
+            AutoFakeSlant=0.2
+          ]
+          \setCJKsansfont{Noto Sans CJK KR}
+          \setCJKmonofont{Noto Sans Mono CJK KR}
+          
+          % ========================================
+          % 2. 코드 블록 줄바꿈 패키지
+          % ========================================
           \usepackage{fvextra}
           \usepackage{listings}
           \usepackage{xcolor}
           \usepackage{seqsplit}
           \usepackage{xurl}
+          
+          % ========================================
+          % 3. 이미지 크기 및 위치 제어 패키지
+          % ========================================
           \usepackage{graphicx}
           \usepackage{float}
+          \usepackage{adjustbox}
           
-          % 이미지 위치 고정 및 크기 제한
+          % 이미지 최대 크기 설정 (페이지 폭의 90%, 높이의 60%)
+          \setkeys{Gin}{width=0.9\textwidth,height=0.6\textheight,keepaspectratio}
+          
+          % 이미지 위치를 현재 위치에 고정
           \let\origfigure\figure
           \let\endorigfigure\endfigure
           \renewenvironment{figure}[1][htbp]{
             \origfigure[H]
+            \centering
           }{
             \endorigfigure
           }
           
-          % 이미지 최대 크기 설정
-          \setkeys{Gin}{width=\textwidth,height=0.8\textheight,keepaspectratio}
+          % 이미지를 자동으로 조정 가능하게 래핑
+          \let\oldincludegraphics\includegraphics
+          \renewcommand{\includegraphics}[2][]{%
+            \adjustbox{max width=0.9\textwidth,max height=0.6\textheight,keepaspectratio}{%
+              \oldincludegraphics[#1]{#2}%
+            }%
+          }
           
-          % Verbatim 환경 설정 - 매우 적극적인 줄바꿈
+          % ========================================
+          % 4. 코드 블록 설정 (매우 적극적인 줄바꿈)
+          % ========================================
+          
+          % 기본 Verbatim 환경 설정
           \fvset{
             breaklines=true,
             breakanywhere=true,
             breakautoindent=false,
             breaksymbolleft={},
             breaksymbolright={},
-            fontsize=\scriptsize,
-            baselinestretch=1
+            fontsize=\tiny,
+            baselinestretch=0.9,
+            xleftmargin=0pt,
+            xrightmargin=0pt
           }
           
-          % Highlighting 환경 (코드 구문 강조용)
+          % Highlighting 환경 (구문 강조 코드용)
           \DefineVerbatimEnvironment{Highlighting}{Verbatim}{
             breaklines=true,
             breakanywhere=true,
@@ -125,8 +165,10 @@ jobs:
             breaksymbolleft={},
             breaksymbolright={},
             commandchars=\\\{\},
-            fontsize=\scriptsize,
-            baselinestretch=1
+            fontsize=\tiny,
+            baselinestretch=0.9,
+            xleftmargin=0pt,
+            xrightmargin=0pt
           }
           
           % verbatim 환경
@@ -136,19 +178,26 @@ jobs:
             breakautoindent=false,
             breaksymbolleft={},
             breaksymbolright={},
-            fontsize=\scriptsize,
-            baselinestretch=1
+            fontsize=\tiny,
+            baselinestretch=0.9,
+            xleftmargin=0pt,
+            xrightmargin=0pt
           }
           
-          % URL 스타일 줄바꿈 설정
-          \def\UrlBreaks{\do\/\do:\do-\do_\do.\do,\do*\do(\do)\do[\do]\do<\do>\do|\do'\do$\do=}
+          % ========================================
+          % 5. 인라인 코드 줄바꿈 설정
+          % ========================================
           
-          % 인라인 코드를 위한 명령어
+          % URL 스타일 줄바꿈 (모든 특수문자에서 줄바꿈 허용)
+          \def\UrlBreaks{\do\/\do:\do-\do_\do.\do,\do*\do(\do)\do[\do]\do<\do>\do|\do'\do$\do=\do\{\do\}}
+          
+          % 인라인 코드 재정의 (모든 특수문자 위치에서 줄바꿈)
           \makeatletter
           \let\oldtexttt\texttt
           \renewcommand{\texttt}[1]{%
             \begingroup
-            \scriptsize
+            \tiny
+            \hyphenchar\font=`\-
             \oldtexttt{%
               \begingroup
               \lccode`~=`.\lowercase{\endgroup\def~}{.\discretionary{}{}{}}%
@@ -163,6 +212,9 @@ jobs:
               \lccode`~=`]\lowercase{\endgroup\def~}{]\discretionary{}{}{}}%
               \lccode`~=`'\lowercase{\endgroup\def~}{'\discretionary{}{}{}}%
               \lccode`~=`$\lowercase{\endgroup\def~}{\$\discretionary{}{}{}}%
+              \lccode`~=`=\lowercase{\endgroup\def~}{=\discretionary{}{}{}}%
+              \lccode`~=`,\lowercase{\endgroup\def~}{,\discretionary{}{}{}}%
+              \lccode`~=`;\lowercase{\endgroup\def~}{;\discretionary{}{}{}}%
               \catcode`.=\active
               \catcode`*=\active
               \catcode`:=\active
@@ -175,36 +227,49 @@ jobs:
               \catcode`]=\active
               \catcode`'=\active
               \catcode`$=\active
+              \catcode`==\active
+              \catcode`,=\active
+              \catcode`;=\active
               \scantokens{#1\noexpand}%
             }%
             \endgroup
           }
           \makeatother
           
-          % 페이지 레이아웃 최적화
+          % ========================================
+          % 6. 페이지 레이아웃 최적화
+          % ========================================
           \usepackage{microtype}
           \usepackage[hang,flushmargin]{footmisc}
           
-          % 단락 간격 조정
-          \setlength{\parskip}{0.5\baselineskip}
+          % 단락 간격 및 들여쓰기
+          \setlength{\parskip}{0.4\baselineskip}
           \setlength{\parindent}{0pt}
           
-          % 페이지 나누기 패널티 조정
+          % 페이지 나누기 최적화
           \widowpenalty=10000
           \clubpenalty=10000
           \raggedbottom
+          
+          % 더 나은 줄바꿈을 위한 설정
+          \tolerance=9999
+          \emergencystretch=3em
+          \hyphenpenalty=10000
+          \exhyphenpenalty=100
           EOF
           
           pandoc combined.md \
             --pdf-engine=xelatex \
             --listings \
-            -V 'mainfont:Noto Sans CJK KR' \
+            -V 'mainfont:Noto Serif CJK KR' \
             -V 'sansfont:Noto Sans CJK KR' \
             -V 'monofont:Noto Sans Mono CJK KR' \
             -V 'CJKmainfont:Noto Sans CJK KR' \
-            -V fontsize=10pt \
-            -V geometry:margin=1.2cm \
-            -V linestretch=1.2 \
+            -V fontsize=9pt \
+            -V geometry:margin=1cm \
+            -V geometry:top=1.5cm \
+            -V geometry:bottom=1.5cm \
+            -V linestretch=1.1 \
             -V documentclass=article \
             --toc \
             --toc-depth=3 \
@@ -253,6 +318,5 @@ jobs:
           git add "$HOME_FILE"
           if ! git diff --staged --quiet; then
             git commit -m "🔗 Update PDF download link"
-            git push origin HEAD:master
             git push origin HEAD:master
           fi
