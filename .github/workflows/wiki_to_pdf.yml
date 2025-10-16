@@ -63,6 +63,9 @@ jobs:
             echo "" >> combined.md
             echo "---" >> combined.md
             echo "" >> combined.md
+            filename=$(basename "$file" .md)
+            echo "# 📄 $filename" >> combined.md
+            echo "" >> combined.md
             cat "$file" >> combined.md
           done
           grep -oP '!\[.*?\]\(\K(https?://[^)]+)' combined.md | sort -u | while read -r url; do
@@ -79,6 +82,18 @@ jobs:
           fc-cache -fv
           echo "📝 설치된 Noto 폰트:"
           fc-list | grep -i "noto.*cjk.*kr" | cut -d: -f2 | sort -u
+          
+          # 코드 줄바꿈을 위한 LaTeX 헤더 생성
+          cat > header.tex << 'EOF'
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{
+  breaklines,
+  breaksymbolleft={},
+  breakanywhere,
+  commandchars=\\\{\}
+}
+EOF
+          
           pandoc combined.md \
             --pdf-engine=xelatex \
             -V 'mainfont:Noto Sans CJK KR' \
@@ -91,6 +106,8 @@ jobs:
             -V documentclass=article \
             --toc \
             --toc-depth=3 \
+            --listings \
+            -H header.tex \
             -o combined.pdf
 
       - name: Commit PDF to repository
@@ -113,9 +130,15 @@ jobs:
           PDF_URL_RAW="https://github.com/GiveSeo/Wiki_drag_and_drop/raw/master/Wiki_전체.pdf"
           PDF_URL_BLOB="https://github.com/GiveSeo/Wiki_drag_and_drop/blob/master/Wiki_전체.pdf"
           HOME_FILE="Home.md"
+          
+          # 기존 PDF 다운로드 섹션 완전 제거
           if grep -q "## 📘 PDF 다운로드" "$HOME_FILE"; then
-            sed -i '/## 📘 PDF 다운로드/,/^## /{ /^## 📘 PDF 다운로드/d; /^## /!d; }' "$HOME_FILE"
+            sed -i '/## 📘 PDF 다운로드/,/^$/d' "$HOME_FILE"
           fi
+          
+          # 파일 끝에 PDF 다운로드 섹션 추가
+          echo "" >> "$HOME_FILE"
+          echo "---" >> "$HOME_FILE"
           echo "" >> "$HOME_FILE"
           echo "## 📘 PDF 다운로드" >> "$HOME_FILE"
           echo "" >> "$HOME_FILE"
@@ -123,6 +146,8 @@ jobs:
           echo "" >> "$HOME_FILE"
           echo "- [📥 PDF 다운로드 (Raw)]($PDF_URL_RAW)" >> "$HOME_FILE"
           echo "- [👁️ GitHub에서 보기]($PDF_URL_BLOB)" >> "$HOME_FILE"
+          echo "" >> "$HOME_FILE"
+          
           git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/GiveSeo/Wiki_drag_and_drop.wiki.git
           git add "$HOME_FILE"
           if ! git diff --staged --quiet; then
