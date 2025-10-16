@@ -44,7 +44,8 @@ jobs:
             texlive-lang-cjk \
             texlive-latex-extra \
             lmodern \
-            fonts-unfonts-core
+            fonts-noto-cjk \
+            fonts-noto-cjk-extra
           echo "✅ Dependencies installed"
 
       - name: Merge Wiki files and download images
@@ -77,11 +78,13 @@ jobs:
           cd wiki
           pandoc combined.md \
             --pdf-engine=xelatex \
-            -V mainfont="UnBatang" \
-            -V CJKmainfont="UnBatang" \
+            -V mainfont="Nanum Gothic" \
+            -V CJKmainfont="Nanum Gothic" \
+            -V monofont="Nanum Gothic Coding" \
             -V fontsize=11pt \
             -V geometry:margin=1.5cm \
             -V linestretch=1.2 \
+            -V documentclass=article \
             --toc \
             --toc-depth=3 \
             -o combined.pdf
