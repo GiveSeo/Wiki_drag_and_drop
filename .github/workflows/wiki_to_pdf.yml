@@ -50,17 +50,20 @@ jobs:
             lmodern \
             fonts-noto-cjk \
             fonts-noto-cjk-extra
-          fc-list :lang=ko family | head -10
           echo "✅ Dependencies installed"
+          echo "📝 설치된 Noto 폰트:"
+          fc-list :lang=ko family | head -10
 
       - name: Merge Wiki files and download images
         run: |
           cd wiki
+          echo "📚 Merging wiki files..."
           echo "# Wiki Documentation" > combined.md
           echo "" >> combined.md
           echo "---" >> combined.md
           echo "" >> combined.md
           mkdir -p downloaded_images
+          
           find . -name "*.md" ! -name "combined.md" ! -path "./.git/*" -print0 | sort -z | while IFS= read -r -d '' file; do
             echo "" >> combined.md
             echo "---" >> combined.md
@@ -70,6 +73,8 @@ jobs:
             echo "" >> combined.md
             cat "$file" >> combined.md
           done
+          
+          echo "🖼️  Downloading images..."
           grep -oP '!\[.*?\]\(\K(https?://[^)]+)' combined.md | sort -u | while read -r url; do
             filename=$(echo "$url" | md5sum | cut -d' ' -f1)
             extension="${url##*.}"
@@ -77,24 +82,22 @@ jobs:
             curl -L -s --max-time 10 "$url" -o "downloaded_images/${filename}.${extension}" || true
             [ -f "downloaded_images/${filename}.${extension}" ] && sed -i "s|$url|downloaded_images/${filename}.${extension}|g" combined.md
           done
+          
+          echo "✅ Wiki files merged"
+          ls -lh combined.md
 
-      - name: Generate PDF
+      - name: Generate LaTeX header
         run: |
           cd wiki
-          fc-cache -fv
-          echo "📝 설치된 Noto 폰트:"
-          fc-list | grep -i "noto.*cjk.*kr" | cut -d: -f2 | sort -u
-          
-          # 모든 문제 해결을 위한 LaTeX 헤더 생성
-          cat > header.tex << 'EOF'
+          echo "📝 Creating LaTeX header..."
+          cat > header.tex << 'EOFHEADER'
           % ========================================
           % 1. 한글 및 특수문자 지원 패키지
           % ========================================
           \usepackage{fontspec}
           \usepackage{xeCJK}
-          \usepackage[utf8]{inputenc}
           
-          % 한글 폰트 설정 (모든 한글 문자 지원)
+          % 한글 폰트 설정
           \setCJKmainfont{Noto Sans CJK KR}[
             UnicodeRange={AC00-D7A3},
             BoldFont=Noto Sans CJK KR Bold,
@@ -109,20 +112,18 @@ jobs:
           \usepackage{fvextra}
           \usepackage{listings}
           \usepackage{xcolor}
-          \usepackage{seqsplit}
           \usepackage{xurl}
           
           % ========================================
-          % 3. 이미지 크기 및 위치 제어 패키지
+          % 3. 이미지 크기 및 위치 제어
           % ========================================
           \usepackage{graphicx}
           \usepackage{float}
-          \usepackage{adjustbox}
           
-          % 이미지 최대 크기 설정 (페이지 폭의 90%, 높이의 60%)
-          \setkeys{Gin}{width=0.9\textwidth,height=0.6\textheight,keepaspectratio}
+          % 이미지 최대 크기 설정
+          \setkeys{Gin}{width=0.85\textwidth,height=0.55\textheight,keepaspectratio}
           
-          % 이미지 위치를 현재 위치에 고정
+          % 이미지 위치 고정
           \let\origfigure\figure
           \let\endorigfigure\endfigure
           \renewenvironment{figure}[1][htbp]{
@@ -132,19 +133,9 @@ jobs:
             \endorigfigure
           }
           
-          % 이미지를 자동으로 조정 가능하게 래핑
-          \let\oldincludegraphics\includegraphics
-          \renewcommand{\includegraphics}[2][]{%
-            \adjustbox{max width=0.9\textwidth,max height=0.6\textheight,keepaspectratio}{%
-              \oldincludegraphics[#1]{#2}%
-            }%
-          }
-          
           % ========================================
-          % 4. 코드 블록 설정 (매우 적극적인 줄바꿈)
+          % 4. 코드 블록 설정
           % ========================================
-          
-          % 기본 Verbatim 환경 설정
           \fvset{
             breaklines=true,
             breakanywhere=true,
@@ -152,12 +143,9 @@ jobs:
             breaksymbolleft={},
             breaksymbolright={},
             fontsize=\tiny,
-            baselinestretch=0.9,
-            xleftmargin=0pt,
-            xrightmargin=0pt
+            baselinestretch=0.85
           }
           
-          % Highlighting 환경 (구문 강조 코드용)
           \DefineVerbatimEnvironment{Highlighting}{Verbatim}{
             breaklines=true,
             breakanywhere=true,
@@ -166,12 +154,9 @@ jobs:
             breaksymbolright={},
             commandchars=\\\{\},
             fontsize=\tiny,
-            baselinestretch=0.9,
-            xleftmargin=0pt,
-            xrightmargin=0pt
+            baselinestretch=0.85
           }
           
-          % verbatim 환경
           \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
             breaklines=true,
             breakanywhere=true,
@@ -179,19 +164,14 @@ jobs:
             breaksymbolleft={},
             breaksymbolright={},
             fontsize=\tiny,
-            baselinestretch=0.9,
-            xleftmargin=0pt,
-            xrightmargin=0pt
+            baselinestretch=0.85
           }
           
           % ========================================
-          % 5. 인라인 코드 줄바꿈 설정
+          % 5. 인라인 코드 줄바꿈
           % ========================================
+          \def\UrlBreaks{\do\/\do:\do-\do_\do.\do,\do*\do(\do)\do[\do]\do<\do>\do|\do'\do$\do=\do\{\do\}\do;\do"}
           
-          % URL 스타일 줄바꿈 (모든 특수문자에서 줄바꿈 허용)
-          \def\UrlBreaks{\do\/\do:\do-\do_\do.\do,\do*\do(\do)\do[\do]\do<\do>\do|\do'\do$\do=\do\{\do\}}
-          
-          % 인라인 코드 재정의 (모든 특수문자 위치에서 줄바꿈)
           \makeatletter
           \let\oldtexttt\texttt
           \renewcommand{\texttt}[1]{%
@@ -215,21 +195,13 @@ jobs:
               \lccode`~=`=\lowercase{\endgroup\def~}{=\discretionary{}{}{}}%
               \lccode`~=`,\lowercase{\endgroup\def~}{,\discretionary{}{}{}}%
               \lccode`~=`;\lowercase{\endgroup\def~}{;\discretionary{}{}{}}%
-              \catcode`.=\active
-              \catcode`*=\active
-              \catcode`:=\active
-              \catcode`_=\active
-              \catcode`-=\active
-              \catcode`/=\active
-              \catcode`(=\active
-              \catcode`)=\active
-              \catcode`[=\active
-              \catcode`]=\active
-              \catcode`'=\active
-              \catcode`$=\active
-              \catcode`==\active
-              \catcode`,=\active
-              \catcode`;=\active
+              \lccode`~=`"\lowercase{\endgroup\def~}{"\discretionary{}{}{}}%
+              \catcode`.=\active \catcode`*=\active \catcode`:=\active
+              \catcode`_=\active \catcode`-=\active \catcode`/=\active
+              \catcode`(=\active \catcode`)=\active \catcode`[=\active
+              \catcode`]=\active \catcode`'=\active \catcode`$=\active
+              \catcode`==\active \catcode`,=\active \catcode`;=\active
+              \catcode`"=\active
               \scantokens{#1\noexpand}%
             }%
             \endgroup
@@ -242,21 +214,27 @@ jobs:
           \usepackage{microtype}
           \usepackage[hang,flushmargin]{footmisc}
           
-          % 단락 간격 및 들여쓰기
-          \setlength{\parskip}{0.4\baselineskip}
+          \setlength{\parskip}{0.3\baselineskip}
           \setlength{\parindent}{0pt}
           
-          % 페이지 나누기 최적화
           \widowpenalty=10000
           \clubpenalty=10000
           \raggedbottom
           
-          % 더 나은 줄바꿈을 위한 설정
           \tolerance=9999
           \emergencystretch=3em
           \hyphenpenalty=10000
           \exhyphenpenalty=100
-          EOF
+          EOFHEADER
+          
+          echo "✅ LaTeX header created"
+          ls -lh header.tex
+
+      - name: Generate PDF with Pandoc
+        run: |
+          cd wiki
+          echo "📄 Generating PDF..."
+          fc-cache -fv
           
           pandoc combined.md \
             --pdf-engine=xelatex \
@@ -275,6 +253,14 @@ jobs:
             --toc-depth=3 \
             -H header.tex \
             -o combined.pdf
+          
+          if [ -f combined.pdf ]; then
+            echo "✅ PDF generated successfully"
+            ls -lh combined.pdf
+          else
+            echo "❌ PDF generation failed"
+            exit 1
+          fi
 
       - name: Commit PDF to repository
         run: |
@@ -288,6 +274,9 @@ jobs:
           if ! git diff --staged --quiet; then
             git commit -m "📄 Update Wiki PDF"
             git push origin HEAD
+            echo "✅ PDF committed and pushed"
+          else
+            echo "ℹ️ No changes to PDF"
           fi
 
       - name: Update Home.md with PDF link
@@ -297,12 +286,10 @@ jobs:
           PDF_URL_BLOB="https://github.com/GiveSeo/Wiki_drag_and_drop/blob/master/Wiki_전체.pdf"
           HOME_FILE="Home.md"
           
-          # 기존 PDF 다운로드 섹션 완전 제거
           if grep -q "## 📘 PDF 다운로드" "$HOME_FILE"; then
             sed -i '/## 📘 PDF 다운로드/,/^$/d' "$HOME_FILE"
           fi
           
-          # 파일 끝에 PDF 다운로드 섹션 추가
           echo "" >> "$HOME_FILE"
           echo "---" >> "$HOME_FILE"
           echo "" >> "$HOME_FILE"
@@ -319,4 +306,7 @@ jobs:
           if ! git diff --staged --quiet; then
             git commit -m "🔗 Update PDF download link"
             git push origin HEAD:master
+            echo "✅ Home.md updated"
+          else
+            echo "ℹ️ No changes to Home.md"
           fi
