@@ -85,14 +85,14 @@ jobs:
           
           # 코드 줄바꿈을 위한 LaTeX 헤더 생성
           cat > header.tex << 'EOF'
-\usepackage{fvextra}
-\DefineVerbatimEnvironment{Highlighting}{Verbatim}{
-  breaklines,
-  breaksymbolleft={},
-  breakanywhere,
-  commandchars=\\\{\}
-}
-EOF
+          \usepackage{fvextra}
+          \DefineVerbatimEnvironment{Highlighting}{Verbatim}{
+            breaklines,
+            breaksymbolleft={},
+            breakanywhere,
+            commandchars=\\\{\}
+          }
+          EOF
           
           pandoc combined.md \
             --pdf-engine=xelatex \
