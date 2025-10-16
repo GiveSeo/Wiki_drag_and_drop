@@ -45,6 +45,7 @@ jobs:
             texlive-fonts-recommended \
             texlive-lang-cjk \
             texlive-latex-extra \
+            texlive-lang-chinese \
             lmodern \
             fonts-noto-cjk
           
@@ -88,16 +89,41 @@ jobs:
           echo "📝 설치된 Noto 폰트:"
           fc-list | grep -i "noto.*cjk.*kr" | cut -d: -f2 | sort -u
           
+          # LaTeX 템플릿 생성 (ctex 사용 안 함)
+          cat > korean-template.tex << 'EOF'
+\documentclass[$if(fontsize)$fontsize$,$endif$if(papersize)$papersize$paper,$endif$]{article}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\setCJKmainfont{Noto Sans CJK KR}
+\setmainfont{Noto Sans CJK KR}
+\setsansfont{Noto Sans CJK KR}
+\setmonofont{Noto Sans Mono CJK KR}
+\usepackage{geometry}
+\geometry{$if(geometry)$geometry$else$margin=1.5cm$endif$}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{booktabs}
+\setlength{\emergencystretch}{3em}
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+$if(linestretch)$
+\usepackage{setspace}
+\setstretch{$linestretch$}
+$endif$
+\begin{document}
+$if(toc)$
+\tableofcontents
+\newpage
+$endif$
+$body$
+\end{document}
+EOF
+          
           pandoc combined.md \
             --pdf-engine=xelatex \
-            -V 'mainfont:Noto Sans CJK KR' \
-            -V 'sansfont:Noto Sans CJK KR' \
-            -V 'monofont:Noto Sans Mono CJK KR' \
-            -V 'CJKmainfont:Noto Sans CJK KR' \
-            -V fontsize=11pt \
+            --template=korean-template.tex \
             -V geometry:margin=1.5cm \
             -V linestretch=1.3 \
-            -V documentclass=article \
             --toc \
             --toc-depth=3 \
             -o combined.pdf
