@@ -24,10 +24,26 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Cache LaTeX packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            /usr/share/texlive
+            /usr/share/texmf
+          key: ${{ runner.os }}-texlive-${{ hashFiles('**/*.md') }}
+          restore-keys: |
+            ${{ runner.os }}-texlive-
+
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y pandoc texlive-xetex texlive-fonts-recommended texlive-lang-cjk fonts-unfonts-core
+          sudo apt-get install -y --no-install-recommends \
+            pandoc \
+            texlive-xetex \
+            texlive-fonts-recommended \
+            texlive-lang-cjk \
+            fonts-unfonts-core
+          echo "✅ Dependencies installed"
 
       - name: Merge Wiki files and download images
         run: |
@@ -84,4 +100,33 @@ jobs:
           if ! git diff --staged --quiet; then
             git commit -m "📄 Update Wiki PDF"
             git push origin HEAD
+          fi
+
+      - name: Update Home.md with PDF link
+        run: |
+          cd wiki
+          
+          PDF_URL_RAW="https://github.com/GiveSeo/Wiki_drag_and_drop/raw/master/Wiki_전체.pdf"
+          PDF_URL_BLOB="https://github.com/GiveSeo/Wiki_drag_and_drop/blob/master/Wiki_전체.pdf"
+          HOME_FILE="Home.md"
+          
+          if grep -q "## 📘 PDF 다운로드" "$HOME_FILE"; then
+            sed -i '/## 📘 PDF 다운로드/,/^## /{ /^## 📘 PDF 다운로드/d; /^## /!d; }' "$HOME_FILE"
+          fi
+          
+          echo "" >> "$HOME_FILE"
+          echo "## 📘 PDF 다운로드" >> "$HOME_FILE"
+          echo "" >> "$HOME_FILE"
+          echo "전체 Wiki를 PDF로 다운로드할 수 있습니다:" >> "$HOME_FILE"
+          echo "" >> "$HOME_FILE"
+          echo "- [📥 PDF 다운로드 (Raw)]($PDF_URL_RAW)" >> "$HOME_FILE"
+          echo "- [👁️ GitHub에서 보기]($PDF_URL_BLOB)" >> "$HOME_FILE"
+          
+          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/GiveSeo/Wiki_drag_and_drop.wiki.git
+          
+          git add "$HOME_FILE"
+          
+          if ! git diff --staged --quiet; then
+            git commit -m "🔗 Update PDF download link"
+            git push origin HEAD:master
           fi
