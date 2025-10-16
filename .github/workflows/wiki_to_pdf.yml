@@ -75,12 +75,26 @@ jobs:
           done
           
           echo "🖼️  Downloading images..."
-          grep -oP '!\[.*?\]\(\K(https?://[^)]+)' combined.md | sort -u | while read -r url; do
-            filename=$(echo "$url" | md5sum | cut -d' ' -f1)
-            extension="${url##*.}"
+          grep -oP '!\[.*?\]\(\K[^)]+' combined.md | grep -E '^https?://' | sort -u | while read -r url; do
+            # URL에서 따옴표 제거
+            clean_url=$(echo "$url" | tr -d '"' | tr -d "'")
+            filename=$(echo "$clean_url" | md5sum | cut -d' ' -f1)
+            extension="${clean_url##*.}"
             [ ${#extension} -gt 4 ] && extension="jpg"
-            curl -L -s --max-time 10 "$url" -o "downloaded_images/${filename}.${extension}" || true
-            [ -f "downloaded_images/${filename}.${extension}" ] && sed -i "s|$url|downloaded_images/${filename}.${extension}|g" combined.md
+            
+            # User-Agent 헤더와 함께 다운로드
+            curl -L -s --max-time 15 \
+              -H "User-Agent: Mozilla/5.0" \
+              -H "Accept: image/*" \
+              "$clean_url" -o "downloaded_images/${filename}.${extension}" || true
+            
+            if [ -f "downloaded_images/${filename}.${extension}" ] && [ -s "downloaded_images/${filename}.${extension}" ]; then
+              # 원본 URL (따옴표 포함)을 로컬 경로로 치환
+              sed -i "s|${url}|downloaded_images/${filename}.${extension}|g" combined.md
+              echo "✓ Downloaded: $clean_url"
+            else
+              echo "✗ Failed: $clean_url"
+            fi
           done
           
           echo "✅ Wiki files merged"
@@ -97,14 +111,17 @@ jobs:
           \usepackage{fontspec}
           \usepackage{xeCJK}
           
-          % 한글 폰트 설정
+          % 한글 폰트 설정 (UnicodeRange 제거)
           \setCJKmainfont{Noto Sans CJK KR}[
-            UnicodeRange={AC00-D7A3},
-            BoldFont=Noto Sans CJK KR Bold,
-            AutoFakeSlant=0.2
+            BoldFont=Noto Sans CJK KR Bold
           ]
           \setCJKsansfont{Noto Sans CJK KR}
           \setCJKmonofont{Noto Sans Mono CJK KR}
+          
+          % 추가 폰트 설정
+          \setmainfont{Noto Serif CJK KR}
+          \setsansfont{Noto Sans CJK KR}
+          \setmonofont{Noto Sans Mono CJK KR}[Scale=0.85]
           
           % ========================================
           % 2. 코드 블록 줄바꿈 패키지
@@ -121,7 +138,7 @@ jobs:
           \usepackage{float}
           
           % 이미지 최대 크기 설정
-          \setkeys{Gin}{width=0.85\textwidth,height=0.55\textheight,keepaspectratio}
+          \setkeys{Gin}{width=0.8\textwidth,height=0.5\textheight,keepaspectratio}
           
           % 이미지 위치 고정
           \let\origfigure\figure
@@ -143,7 +160,7 @@ jobs:
             breaksymbolleft={},
             breaksymbolright={},
             fontsize=\tiny,
-            baselinestretch=0.85
+            baselinestretch=0.8
           }
           
           \DefineVerbatimEnvironment{Highlighting}{Verbatim}{
@@ -154,7 +171,7 @@ jobs:
             breaksymbolright={},
             commandchars=\\\{\},
             fontsize=\tiny,
-            baselinestretch=0.85
+            baselinestretch=0.8
           }
           
           \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
@@ -164,7 +181,7 @@ jobs:
             breaksymbolleft={},
             breaksymbolright={},
             fontsize=\tiny,
-            baselinestretch=0.85
+            baselinestretch=0.8
           }
           
           % ========================================
@@ -239,10 +256,6 @@ jobs:
           pandoc combined.md \
             --pdf-engine=xelatex \
             --listings \
-            -V 'mainfont:Noto Serif CJK KR' \
-            -V 'sansfont:Noto Sans CJK KR' \
-            -V 'monofont:Noto Sans Mono CJK KR' \
-            -V 'CJKmainfont:Noto Sans CJK KR' \
             -V fontsize=9pt \
             -V geometry:margin=1cm \
             -V geometry:top=1.5cm \
