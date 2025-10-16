@@ -83,27 +83,41 @@ jobs:
           echo "📝 설치된 Noto 폰트:"
           fc-list | grep -i "noto.*cjk.*kr" | cut -d: -f2 | sort -u
           
-          # 매우 강력한 코드 줄바꿈 해결을 위한 LaTeX 헤더 생성
+          # 코드 줄바꿈 및 이미지 위치 문제 해결을 위한 LaTeX 헤더
           cat > header.tex << 'EOF'
-          % 모든 필요한 패키지 로드
+          % 필수 패키지 로드
           \usepackage{fvextra}
           \usepackage{listings}
           \usepackage{xcolor}
           \usepackage{seqsplit}
-          \usepackage{url}
+          \usepackage{xurl}
+          \usepackage{graphicx}
+          \usepackage{float}
           
-          % 기본 Verbatim 환경 설정 - 매우 적극적인 줄바꿈
+          % 이미지 위치 고정 및 크기 제한
+          \let\origfigure\figure
+          \let\endorigfigure\endfigure
+          \renewenvironment{figure}[1][htbp]{
+            \origfigure[H]
+          }{
+            \endorigfigure
+          }
+          
+          % 이미지 최대 크기 설정
+          \setkeys{Gin}{width=\textwidth,height=0.8\textheight,keepaspectratio}
+          
+          % Verbatim 환경 설정 - 매우 적극적인 줄바꿈
           \fvset{
             breaklines=true,
             breakanywhere=true,
             breakautoindent=false,
             breaksymbolleft={},
             breaksymbolright={},
-            fontsize=\footnotesize,
+            fontsize=\scriptsize,
             baselinestretch=1
           }
           
-          % Highlighting 환경 (코드 구문 강조용) - 더 적극적으로 줄바꿈
+          % Highlighting 환경 (코드 구문 강조용)
           \DefineVerbatimEnvironment{Highlighting}{Verbatim}{
             breaklines=true,
             breakanywhere=true,
@@ -111,37 +125,61 @@ jobs:
             breaksymbolleft={},
             breaksymbolright={},
             commandchars=\\\{\},
-            fontsize=\footnotesize,
+            fontsize=\scriptsize,
             baselinestretch=1
           }
           
-          % verbatim 환경도 동일하게 설정
+          % verbatim 환경
           \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
             breaklines=true,
             breakanywhere=true,
             breakautoindent=false,
             breaksymbolleft={},
             breaksymbolright={},
-            fontsize=\footnotesize,
+            fontsize=\scriptsize,
             baselinestretch=1
           }
           
-          % 인라인 코드를 위한 새로운 명령어 정의
-          \newcommand{\inlinecode}[1]{%
-            \texttt{\seqsplit{#1}}%
-          }
+          % URL 스타일 줄바꿈 설정
+          \def\UrlBreaks{\do\/\do:\do-\do_\do.\do,\do*\do(\do)\do[\do]\do<\do>\do|\do'\do$\do=}
           
-          % \texttt 재정의 - seqsplit 사용으로 모든 문자에서 줄바꿈 가능
+          % 인라인 코드를 위한 명령어
+          \makeatletter
           \let\oldtexttt\texttt
           \renewcommand{\texttt}[1]{%
             \begingroup
-            \footnotesize
-            \oldtexttt{\seqsplit{#1}}%
+            \scriptsize
+            \oldtexttt{%
+              \begingroup
+              \lccode`~=`.\lowercase{\endgroup\def~}{.\discretionary{}{}{}}%
+              \lccode`~=`*\lowercase{\endgroup\def~}{*\discretionary{}{}{}}%
+              \lccode`~=`:\lowercase{\endgroup\def~}{:\discretionary{}{}{}}%
+              \lccode`~=`_\lowercase{\endgroup\def~}{_\discretionary{}{}{}}%
+              \lccode`~=`-\lowercase{\endgroup\def~}{-\discretionary{}{}{}}%
+              \lccode`~=`/\lowercase{\endgroup\def~}{/\discretionary{}{}{}}%
+              \lccode`~=`(\lowercase{\endgroup\def~}{(\discretionary{}{}{}}%
+              \lccode`~=`)\lowercase{\endgroup\def~}{)\discretionary{}{}{}}%
+              \lccode`~=`[\lowercase{\endgroup\def~}{[\discretionary{}{}{}}%
+              \lccode`~=`]\lowercase{\endgroup\def~}{]\discretionary{}{}{}}%
+              \lccode`~=`'\lowercase{\endgroup\def~}{'\discretionary{}{}{}}%
+              \lccode`~=`$\lowercase{\endgroup\def~}{\$\discretionary{}{}{}}%
+              \catcode`.=\active
+              \catcode`*=\active
+              \catcode`:=\active
+              \catcode`_=\active
+              \catcode`-=\active
+              \catcode`/=\active
+              \catcode`(=\active
+              \catcode`)=\active
+              \catcode`[=\active
+              \catcode`]=\active
+              \catcode`'=\active
+              \catcode`$=\active
+              \scantokens{#1\noexpand}%
+            }%
             \endgroup
           }
-          
-          % URL 스타일도 줄바꿈 가능하게
-          \def\UrlBreaks{\do\/\do-\do.\do:\do_\do(\do)\do[\do]\do\{\do\}}
+          \makeatother
           
           % 페이지 레이아웃 최적화
           \usepackage{microtype}
@@ -150,6 +188,11 @@ jobs:
           % 단락 간격 조정
           \setlength{\parskip}{0.5\baselineskip}
           \setlength{\parindent}{0pt}
+          
+          % 페이지 나누기 패널티 조정
+          \widowpenalty=10000
+          \clubpenalty=10000
+          \raggedbottom
           EOF
           
           pandoc combined.md \
@@ -159,7 +202,7 @@ jobs:
             -V 'sansfont:Noto Sans CJK KR' \
             -V 'monofont:Noto Sans Mono CJK KR' \
             -V 'CJKmainfont:Noto Sans CJK KR' \
-            -V fontsize=11pt \
+            -V fontsize=10pt \
             -V geometry:margin=1.2cm \
             -V linestretch=1.2 \
             -V documentclass=article \
@@ -210,5 +253,6 @@ jobs:
           git add "$HOME_FILE"
           if ! git diff --staged --quiet; then
             git commit -m "🔗 Update PDF download link"
+            git push origin HEAD:master
             git push origin HEAD:master
           fi
