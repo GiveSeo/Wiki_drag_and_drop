@@ -81,13 +81,13 @@ jobs:
           fc-list | grep -i "noto.*cjk.*kr" | cut -d: -f2 | sort -u
           pandoc combined.md \
             --pdf-engine=xelatex \
-            -V 'mainfont:Noto Sans CJK KR' \
-            -V 'sansfont:Noto Sans CJK KR' \
-            -V 'monofont:Noto Sans Mono CJK KR' \
-            -V 'CJKmainfont:Noto Sans CJK KR' \
-            -V fontsize=11pt \
+            -V 'mainfont=Noto Sans CJK KR' \
+            -V 'sansfont=Noto Sans CJK KR' \
+            -V 'monofont=Noto Sans Mono CJK KR' \
+            -V 'CJKmainfont=Noto Sans CJK KR' \
+            -V fontsize=1pt \
             -V geometry:margin=1.5cm \
-            -V linestretch=1.3 \
+            -V linestretch=1.0 \
             -V documentclass=article \
             -V 'verbatimfont={\fontsize{1pt}{1pt}\selectfont}' \
             --toc \
@@ -104,7 +104,7 @@ jobs:
           git pull origin HEAD --rebase || true
           git add Wiki_전체.pdf
           if ! git diff --staged --quiet; then
-            git commit -m "📄 Update Wiki PDF"
+            git commit -m "📄 Update Wiki PDF (All fonts 1pt)"
             git push origin HEAD
           fi
 
