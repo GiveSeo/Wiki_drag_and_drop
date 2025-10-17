@@ -1,4 +1,4 @@
-name: Generate PDF from Wiki (All Fonts 1pt)
+name: Generate PDF from Wiki (Code 5pt, Normal Text Default)
 
 on:
   schedule:
@@ -73,51 +73,47 @@ jobs:
             [ -f "downloaded_images/${filename}.${extension}" ] && sed -i "s|$url|downloaded_images/${filename}.${extension}|g" combined.md
           done
 
-      - name: Create 1pt font LaTeX header
+      - name: Create custom font LaTeX header
         run: |
           cd wiki
-          cat > font-1pt-override.tex << 'EOF'
+          cat > font-custom.tex << 'EOF'
           % Package for any font size
           \usepackage{anyfontsize}
           
-          % Override all font size commands to 1pt
-          \renewcommand{\normalsize}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\small}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\footnotesize}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\scriptsize}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\tiny}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\large}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\Large}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\LARGE}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\huge}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\Huge}{\fontsize{1pt}{1.2pt}\selectfont}
-          
-          % Override section titles with 1pt font
-          \usepackage{titlesec}
-          \titleformat{\section}{\fontsize{1pt}{1.2pt}\selectfont\bfseries}{\thesection}{1em}{}
-          \titleformat{\subsection}{\fontsize{1pt}{1.2pt}\selectfont\bfseries}{\thesubsection}{1em}{}
-          \titleformat{\subsubsection}{\fontsize{1pt}{1.2pt}\selectfont\bfseries}{\thesubsubsection}{1em}{}
-          \titleformat{\paragraph}{\fontsize{1pt}{1.2pt}\selectfont\bfseries}{\theparagraph}{1em}{}
-          \titleformat{\subparagraph}{\fontsize{1pt}{1.2pt}\selectfont\bfseries}{\thesubparagraph}{1em}{}
-          
-          % Override TOC fonts
-          \usepackage{tocloft}
-          \renewcommand{\cfttoctitlefont}{\fontsize{1pt}{1.2pt}\selectfont\bfseries}
-          \renewcommand{\cftsecfont}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\cftsubsecfont}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\cftsubsubsecfont}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\cftparafont}{\fontsize{1pt}{1.2pt}\selectfont}
-          \renewcommand{\cftsubparafont}{\fontsize{1pt}{1.2pt}\selectfont}
-          
-          % Set global font size at document start
-          \AtBeginDocument{\fontsize{1pt}{1.2pt}\selectfont}
-          
-          % Override verbatim and code block fonts
+          % Code blocks and verbatim environment - 5pt font
           \usepackage{fancyvrb}
-          \fvset{fontsize=\fontsize{1pt}{1.2pt}\selectfont}
+          \DefineVerbatimEnvironment{Highlighting}{Verbatim}{
+            fontsize=\fontsize{5pt}{6pt}\selectfont,
+            commandchars=\\\{\}
+          }
+          
+          % Override all verbatim-related environments to 5pt
+          \fvset{fontsize=\fontsize{5pt}{6pt}\selectfont}
+          
+          % Inline code - 5pt font
+          \let\oldtexttt\texttt
+          \renewcommand{\texttt}[1]{{\fontsize{5pt}{6pt}\selectfont\oldtexttt{#1}}}
+          
+          % Code blocks from pandoc - 5pt font
+          \usepackage{etoolbox}
+          \AtBeginEnvironment{verbatim}{\fontsize{5pt}{6pt}\selectfont}
+          \AtBeginEnvironment{Verbatim}{\fontsize{5pt}{6pt}\selectfont}
+          \AtBeginEnvironment{lstlisting}{\fontsize{5pt}{6pt}\selectfont}
+          
+          % Additional styling for code blocks
+          \usepackage{listings}
+          \lstset{
+            basicstyle=\fontsize{5pt}{6pt}\selectfont\ttfamily,
+            commentstyle=\fontsize{5pt}{6pt}\selectfont\itshape,
+            stringstyle=\fontsize{5pt}{6pt}\selectfont,
+            keywordstyle=\fontsize{5pt}{6pt}\selectfont\bfseries
+          }
+          
+          % Ensure monospace font is also 5pt for code
+          \renewcommand{\verbatim@font}{\fontsize{5pt}{6pt}\selectfont\ttfamily}
           EOF
 
-      - name: Generate PDF with 1pt font
+      - name: Generate PDF
         run: |
           cd wiki
           fc-cache -fv
@@ -131,33 +127,35 @@ jobs:
             -V 'CJKmainfont=Noto Sans CJK KR' \
             -V 'CJKsansfont=Noto Sans CJK KR' \
             -V 'CJKmonofont=Noto Sans Mono CJK KR' \
-            -H font-1pt-override.tex \
+            -H font-custom.tex \
             -V geometry:margin=1.5cm \
-            -V linestretch=1.0 \
+            -V linestretch=1.5 \
             -V documentclass=article \
+            -V fontsize=11pt \
             --toc \
             --toc-depth=3 \
+            --highlight-style=tango \
             -o combined.pdf
 
       - name: Commit PDF to repository
         run: |
-          mv wiki/combined.pdf Wiki_전체_1pt.pdf
+          mv wiki/combined.pdf Wiki_전체.pdf
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/GiveSeo/Wiki_drag_and_drop.git
           git fetch origin
           git pull origin HEAD --rebase || true
-          git add Wiki_전체_1pt.pdf
+          git add Wiki_전체.pdf
           if ! git diff --staged --quiet; then
-            git commit -m "📄 Update Wiki PDF (All fonts 1pt)"
+            git commit -m "📄 Update Wiki PDF (Code 5pt, Normal text default)"
             git push origin HEAD
           fi
 
       - name: Update Home.md with PDF link
         run: |
           cd wiki
-          PDF_URL_RAW="https://github.com/GiveSeo/Wiki_drag_and_drop/raw/master/Wiki_전체_1pt.pdf"
-          PDF_URL_BLOB="https://github.com/GiveSeo/Wiki_drag_and_drop/blob/master/Wiki_전체_1pt.pdf"
+          PDF_URL_RAW="https://github.com/GiveSeo/Wiki_drag_and_drop/raw/master/Wiki_전체.pdf"
+          PDF_URL_BLOB="https://github.com/GiveSeo/Wiki_drag_and_drop/blob/master/Wiki_전체.pdf"
           HOME_FILE="Home.md"
           if grep -q "## 📘 PDF 다운로드" "$HOME_FILE"; then
             sed -i '/## 📘 PDF 다운로드/,/^## /{ /^## 📘 PDF 다운로드/d; /^## /!d; }' "$HOME_FILE"
@@ -165,13 +163,13 @@ jobs:
           echo "" >> "$HOME_FILE"
           echo "## 📘 PDF 다운로드" >> "$HOME_FILE"
           echo "" >> "$HOME_FILE"
-          echo "전체 Wiki를 PDF로 다운로드할 수 있습니다 (모든 폰트 1pt):" >> "$HOME_FILE"
+          echo "전체 Wiki를 PDF로 다운로드할 수 있습니다 (코드 블록 5pt, 본문 기본 크기):" >> "$HOME_FILE"
           echo "" >> "$HOME_FILE"
           echo "- [📥 PDF 다운로드 (Raw)]($PDF_URL_RAW)" >> "$HOME_FILE"
           echo "- [👁️ GitHub에서 보기]($PDF_URL_BLOB)" >> "$HOME_FILE"
           git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/GiveSeo/Wiki_drag_and_drop.wiki.git
           git add "$HOME_FILE"
           if ! git diff --staged --quiet; then
-            git commit -m "🔗 Update PDF download link (1pt font)"
+            git commit -m "🔗 Update PDF download link (Code 5pt)"
             git push origin HEAD:master
           fi
