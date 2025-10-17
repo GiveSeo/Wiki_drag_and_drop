@@ -146,16 +146,16 @@ jobs:
           PDF_URL_RAW="https://github.com/GiveSeo/Wiki_drag_and_drop/raw/master/Wiki_전체.pdf"
           PDF_URL_BLOB="https://github.com/GiveSeo/Wiki_drag_and_drop/blob/master/Wiki_전체.pdf"
           HOME_FILE="Home.md"
-          if grep -q "## 📘 PDF 다운로드" "$HOME_FILE"; then
-            sed -i '/## 📘 PDF 다운로드/,/^## /{ /^## 📘 PDF 다운로드/d; /^## /!d; }' "$HOME_FILE"
+          if grep -q "##  PDF 다운로드" "$HOME_FILE"; then
+            sed -i '/##  PDF 다운로드/,/^## /{ /^##  PDF 다운로드/d; /^## /!d; }' "$HOME_FILE"
           fi
           echo "" >> "$HOME_FILE"
           echo "## 📘 PDF 다운로드" >> "$HOME_FILE"
           echo "" >> "$HOME_FILE"
           echo "전체 Wiki를 PDF로 다운로드할 수 있습니다 (코드 블록 5pt, 본문 기본 크기):" >> "$HOME_FILE"
           echo "" >> "$HOME_FILE"
-          echo "- [📥 PDF 다운로드 (Raw)]($PDF_URL_RAW)" >> "$HOME_FILE"
-          echo "- [👁️ GitHub에서 보기]($PDF_URL_BLOB)" >> "$HOME_FILE"
+          echo "- [ PDF 다운로드 (Raw)]($PDF_URL_RAW)" >> "$HOME_FILE"
+          echo "- [ GitHub에서 보기]($PDF_URL_BLOB)" >> "$HOME_FILE"
           git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/GiveSeo/Wiki_drag_and_drop.wiki.git
           git add "$HOME_FILE"
           if ! git diff --staged --quiet; then
