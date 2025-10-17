@@ -68,9 +68,9 @@ jobs:
             | while IFS= read -r -d '' file; do
                 # 각 파일 제목 표시 (파일명 기준)
                 filename=$(basename "$file" .md)
-                echo "" >> combined.md
+                echo  -e "\n"  >> combined.md
                 echo "## $filename" >> combined.md
-                echo "" >> combined.md
+                echo  -e "\n"  >> combined.md
                 echo "---" >> combined.md
                 echo "" >> combined.md
                 cat "$file" >> combined.md
