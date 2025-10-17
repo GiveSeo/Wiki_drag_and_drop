@@ -1,4 +1,4 @@
-name: Generate PDF from Wiki (Code 5pt, Normal Text Default)
+name: Generate PDF from Wiki
 
 on:
   schedule:
@@ -9,6 +9,15 @@ on:
   push:
     branches:
       - main
+
+env:
+  REPO_OWNER: GiveSeo # github username 작성
+  REPO_NAME: Wiki_drag_and_drop # main repository name 작성
+  WIKI_REPO_NAME: Wiki_drag_and_drop.wiki # wiki repository name 작성
+  PDF_FILENAME: Wiki_ALL.pdf # 생성될 PDF 파일명 작성
+  COMMITTER_NAME: github-actions[bot] 
+  COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
+  BRANCH: main
 
 jobs:
   build-pdf:
@@ -21,10 +30,10 @@ jobs:
 
       - name: Clone Wiki repository
         run: |
-          git clone https://${{ secrets.GH_PAT }}@github.com/GiveSeo/Wiki_drag_and_drop.wiki.git wiki
+          git clone https://${{ secrets.GH_PAT }}@github.com/${{ env.REPO_OWNER }}/${{ env.WIKI_REPO_NAME }}.git wiki
           cd wiki
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "${{ env.COMMITTER_NAME }}"
+          git config user.email "${{ env.COMMITTER_EMAIL }}"
 
       - name: Cache LaTeX packages
         uses: actions/cache@v3
@@ -134,14 +143,14 @@ jobs:
 
       - name: Commit PDF to repository
         run: |
-          mv wiki/combined.pdf Wiki_ALL.pdf
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/GiveSeo/Wiki_drag_and_drop.git
+          mv wiki/combined.pdf $PDF_FILENAME
+          git config user.name "${COMMITTER_NAME}"
+          git config user.email "${COMMITTER_EMAIL}"
+          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${REPO_OWNER}/${REPO_NAME}.git
           git fetch origin
-          git pull origin main --rebase || true
-          git add Wiki_ALL.pdf
+          git pull origin $BRANCH --rebase || true
+          git add $PDF_FILENAME
           if ! git diff --staged --quiet; then
             git commit -m "Update Wiki PDF (Code 5pt, Normal text default)"
-            git push origin main
+            git push origin $BRANCH
           fi
