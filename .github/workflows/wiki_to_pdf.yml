@@ -2,7 +2,7 @@ name: Generate PDF from Wiki
 
 on:
   schedule:
-    - cron: '0 15 * * *'
+    - cron: '0 15 * * *' # (UTC 기준 15시 -> 한국 기준 0시) 마다 MD -> PDF 변환
   workflow_dispatch:
   repository_dispatch:
     types: [wiki-updated]
