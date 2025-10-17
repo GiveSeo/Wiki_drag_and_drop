@@ -48,13 +48,10 @@ jobs:
             texlive-lang-chinese \
             lmodern \
             fonts-noto-cjk
-          fc-list :lang=ko family | head -5
-          echo "Dependencies installed"
 
       - name: Merge Wiki files and download images
         run: |
           cd wiki
-          # 시작부에 문서 제목 입력
           echo "# Wiki Documentation" > combined.md
           echo "" >> combined.md
           echo "# 전체 위키 문서" >> combined.md
@@ -75,7 +72,6 @@ jobs:
                 cat "$file" >> combined.md
               done
 
-          # 이미지 URL 다운로드 및 경로 치환
           grep -oP '!\[.*?\]\(\K(https?://[^)]+)' combined.md \
             | sort -u \
             | while read -r url; do
@@ -121,10 +117,6 @@ jobs:
       - name: Generate PDF
         run: |
           cd wiki
-          fc-cache -fv
-          echo "Installed Noto CJK fonts:"
-          fc-list | grep -i "noto.*cjk.*kr" | cut -d: -f2 | sort -u
-
           pandoc combined.md \
             --pdf-engine=xelatex \
             -V mainfont="Noto Sans CJK KR" \
