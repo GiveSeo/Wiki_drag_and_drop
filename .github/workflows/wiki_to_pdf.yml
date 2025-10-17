@@ -6,9 +6,6 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [wiki-updated]
-  push:
-    branches:
-      - main
 
 env:
   REPO_OWNER: GiveSeo # github username 작성
