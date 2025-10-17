@@ -49,29 +49,41 @@ jobs:
             lmodern \
             fonts-noto-cjk
           fc-list :lang=ko family | head -5
-          echo "✅ Dependencies installed"
+          echo "Dependencies installed"
 
       - name: Merge Wiki files and download images
         run: |
           cd wiki
+          # 시작부에 문서 제목 입력
           echo "# Wiki Documentation" > combined.md
+          echo "" >> combined.md
+          echo "# <원하는 문서 제목 입력>" >> combined.md
           echo "" >> combined.md
           echo "---" >> combined.md
           echo "" >> combined.md
+
           mkdir -p downloaded_images
-          find . -name "*.md" ! -name "combined.md" ! -path "./.git/*" -print0 | sort -z | while IFS= read -r -d '' file; do
-            echo "" >> combined.md
-            echo "---" >> combined.md
-            echo "" >> combined.md
-            cat "$file" >> combined.md
-          done
-          grep -oP '!\[.*?\]\(\K(https?://[^)]+)' combined.md | sort -u | while read -r url; do
-            filename=$(echo "$url" | md5sum | cut -d' ' -f1)
-            extension="${url##*.}"
-            [ ${#extension} -gt 4 ] && extension="jpg"
-            curl -L -s --max-time 10 "$url" -o "downloaded_images/${filename}.${extension}" || true
-            [ -f "downloaded_images/${filename}.${extension}" ] && sed -i "s|$url|downloaded_images/${filename}.${extension}|g" combined.md
-          done
+          find . -name "*.md" ! -name "combined.md" ! -path "./.git/*" -print0 \
+            | sort -z \
+            | while IFS= read -r -d '' file; do
+                echo "" >> combined.md
+                echo "---" >> combined.md
+                echo "" >> combined.md
+                cat "$file" >> combined.md
+              done
+
+          grep -oP '!\[.*?\]\(\K(https?://[^)]+)' combined.md \
+            | sort -u \
+            | while read -r url; do
+                filename=$(echo "$url" | md5sum | cut -d' ' -f1)
+                extension="${url##*.}"
+                [ ${#extension} -gt 4 ] && extension="jpg"
+                curl -L -s --max-time 10 "$url" \
+                  -o "downloaded_images/${filename}.${extension}" || true
+                if [ -f "downloaded_images/${filename}.${extension}" ]; then
+                  sed -i "s|$url|downloaded_images/${filename}.${extension}|g" combined.md
+                fi
+              done
 
       - name: Create custom font LaTeX header
         run: |
@@ -79,11 +91,11 @@ jobs:
           cat > font-custom.tex << 'EOF'
           % Package for any font size
           \usepackage{anyfontsize}
-          
+
           % Code highlighting and verbatim - 5pt font
           \usepackage{fancyvrb}
           \usepackage{fvextra}
-          
+
           % Define Highlighting environment for pandoc code blocks - 5pt
           \DefineVerbatimEnvironment{Highlighting}{Verbatim}{
             fontsize=\fontsize{5pt}{6pt}\selectfont,
@@ -93,10 +105,10 @@ jobs:
             showtabs=false,
             commandchars=\\\{\}
           }
-          
+
           % Override verbatim environment - 5pt
           \fvset{fontsize=\fontsize{5pt}{6pt}\selectfont}
-          
+
           % Inline code - 5pt font
           \let\oldtexttt\texttt
           \renewcommand{\texttt}[1]{{\fontsize{5pt}{6pt}\selectfont\oldtexttt{#1}}}
@@ -106,23 +118,21 @@ jobs:
         run: |
           cd wiki
           fc-cache -fv
-          echo "📝 설치된 Noto 폰트:"
+          echo "Installed Noto CJK fonts:"
           fc-list | grep -i "noto.*cjk.*kr" | cut -d: -f2 | sort -u
+
           pandoc combined.md \
             --pdf-engine=xelatex \
-            -V 'mainfont=Noto Sans CJK KR' \
-            -V 'sansfont=Noto Sans CJK KR' \
-            -V 'monofont=Noto Sans Mono CJK KR' \
-            -V 'CJKmainfont=Noto Sans CJK KR' \
-            -V 'CJKsansfont=Noto Sans CJK KR' \
-            -V 'CJKmonofont=Noto Sans Mono CJK KR' \
+            -V mainfont="Noto Sans CJK KR" \
+            -V sansfont="Noto Sans CJK KR" \
+            -V monofont="Noto Sans Mono CJK KR" \
+            -V CJKmainfont="Noto Sans CJK KR" \
+            -V CJKsansfont="Noto Sans CJK KR" \
+            -V CJKmonofont="Noto Sans Mono CJK KR" \
             -H font-custom.tex \
             -V geometry:margin=1.5cm \
             -V linestretch=1.5 \
-            -V documentclass=article \
             -V fontsize=11pt \
-            --toc \
-            --toc-depth=3 \
             --highlight-style=tango \
             -o combined.pdf
 
@@ -136,7 +146,7 @@ jobs:
           git pull origin HEAD --rebase || true
           git add Wiki_전체.pdf
           if ! git diff --staged --quiet; then
-            git commit -m "📄 Update Wiki PDF (Code 5pt, Normal text default)"
+            git commit -m "Update Wiki PDF (Code 5pt, Normal text default)"
             git push origin HEAD
           fi
 
@@ -146,19 +156,22 @@ jobs:
           PDF_URL_RAW="https://github.com/GiveSeo/Wiki_drag_and_drop/raw/master/Wiki_전체.pdf"
           PDF_URL_BLOB="https://github.com/GiveSeo/Wiki_drag_and_drop/blob/master/Wiki_전체.pdf"
           HOME_FILE="Home.md"
+
           if grep -q "##  PDF 다운로드" "$HOME_FILE"; then
             sed -i '/##  PDF 다운로드/,/^## /{ /^##  PDF 다운로드/d; /^## /!d; }' "$HOME_FILE"
           fi
+
           echo "" >> "$HOME_FILE"
-          echo "## 📘 PDF 다운로드" >> "$HOME_FILE"
+          echo "## PDF 다운로드" >> "$HOME_FILE"
           echo "" >> "$HOME_FILE"
-          echo "전체 Wiki를 PDF로 다운로드할 수 있습니다 (코드 블록 5pt, 본문 기본 크기):" >> "$HOME_FILE"
+          echo "전체 Wiki를 PDF로 다운로드할 수 있습니다:" >> "$HOME_FILE"
           echo "" >> "$HOME_FILE"
-          echo "- [ PDF 다운로드 (Raw)]($PDF_URL_RAW)" >> "$HOME_FILE"
-          echo "- [ GitHub에서 보기]($PDF_URL_BLOB)" >> "$HOME_FILE"
+          echo "- [PDF 다운로드 (Raw)]($PDF_URL_RAW)" >> "$HOME_FILE"
+          echo "- [GitHub에서 보기]($PDF_URL_BLOB)" >> "$HOME_FILE"
+
           git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/GiveSeo/Wiki_drag_and_drop.wiki.git
           git add "$HOME_FILE"
           if ! git diff --staged --quiet; then
-            git commit -m "🔗 Update PDF download link (Code 5pt)"
+            git commit -m "Update PDF download link (Code 5pt)"
             git push origin HEAD:master
           fi
