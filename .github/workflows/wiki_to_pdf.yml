@@ -46,234 +46,53 @@ jobs:
             texlive-lang-cjk \
             texlive-latex-extra \
             texlive-lang-chinese \
-            texlive-lang-korean \
             lmodern \
-            fonts-noto-cjk \
-            fonts-noto-cjk-extra
+            fonts-noto-cjk
+          fc-list :lang=ko family | head -5
           echo "✅ Dependencies installed"
-          echo "📝 설치된 Noto 폰트:"
-          fc-list :lang=ko family | head -10
 
       - name: Merge Wiki files and download images
         run: |
           cd wiki
-          echo "📚 Merging wiki files..."
           echo "# Wiki Documentation" > combined.md
           echo "" >> combined.md
           echo "---" >> combined.md
           echo "" >> combined.md
           mkdir -p downloaded_images
-          
           find . -name "*.md" ! -name "combined.md" ! -path "./.git/*" -print0 | sort -z | while IFS= read -r -d '' file; do
             echo "" >> combined.md
             echo "---" >> combined.md
             echo "" >> combined.md
-            filename=$(basename "$file" .md)
-            echo "# 📄 $filename" >> combined.md
-            echo "" >> combined.md
             cat "$file" >> combined.md
           done
-          
-          echo "🖼️  Downloading images..."
-          grep -oP '!\[.*?\]\(\K[^)]+' combined.md | grep -E '^https?://' | sort -u | while read -r url; do
-            # URL에서 따옴표 제거
-            clean_url=$(echo "$url" | tr -d '"' | tr -d "'")
-            filename=$(echo "$clean_url" | md5sum | cut -d' ' -f1)
-            extension="${clean_url##*.}"
+          grep -oP '!\[.*?\]\(\K(https?://[^)]+)' combined.md | sort -u | while read -r url; do
+            filename=$(echo "$url" | md5sum | cut -d' ' -f1)
+            extension="${url##*.}"
             [ ${#extension} -gt 4 ] && extension="jpg"
-            
-            # User-Agent 헤더와 함께 다운로드
-            curl -L -s --max-time 15 \
-              -H "User-Agent: Mozilla/5.0" \
-              -H "Accept: image/*" \
-              "$clean_url" -o "downloaded_images/${filename}.${extension}" || true
-            
-            if [ -f "downloaded_images/${filename}.${extension}" ] && [ -s "downloaded_images/${filename}.${extension}" ]; then
-              # 원본 URL (따옴표 포함)을 로컬 경로로 치환
-              sed -i "s|${url}|downloaded_images/${filename}.${extension}|g" combined.md
-              echo "✓ Downloaded: $clean_url"
-            else
-              echo "✗ Failed: $clean_url"
-            fi
+            curl -L -s --max-time 10 "$url" -o "downloaded_images/${filename}.${extension}" || true
+            [ -f "downloaded_images/${filename}.${extension}" ] && sed -i "s|$url|downloaded_images/${filename}.${extension}|g" combined.md
           done
-          
-          echo "✅ Wiki files merged"
-          ls -lh combined.md
 
-      - name: Generate LaTeX header
+      - name: Generate PDF
         run: |
           cd wiki
-          echo "📝 Creating LaTeX header..."
-          cat > header.tex << 'EOFHEADER'
-          % ========================================
-          % 1. 한글 및 특수문자 지원 패키지
-          % ========================================
-          \usepackage{fontspec}
-          \usepackage{xeCJK}
-          
-          % 한글 폰트 설정 (UnicodeRange 제거)
-          \setCJKmainfont{Noto Sans CJK KR}[
-            BoldFont=Noto Sans CJK KR Bold
-          ]
-          \setCJKsansfont{Noto Sans CJK KR}
-          \setCJKmonofont{Noto Sans Mono CJK KR}
-          
-          % 추가 폰트 설정
-          \setmainfont{Noto Serif CJK KR}
-          \setsansfont{Noto Sans CJK KR}
-          \setmonofont{Noto Sans Mono CJK KR}[Scale=0.85]
-          
-          % ========================================
-          % 2. 코드 블록 줄바꿈 패키지
-          % ========================================
-          \usepackage{fvextra}
-          \usepackage{listings}
-          \usepackage{xcolor}
-          \usepackage{xurl}
-          
-          % ========================================
-          % 3. 이미지 크기 및 위치 제어
-          % ========================================
-          \usepackage{graphicx}
-          \usepackage{float}
-          
-          % 이미지 최대 크기 설정
-          \setkeys{Gin}{width=0.8\textwidth,height=0.5\textheight,keepaspectratio}
-          
-          % 이미지 위치 고정
-          \let\origfigure\figure
-          \let\endorigfigure\endfigure
-          \renewenvironment{figure}[1][htbp]{
-            \origfigure[H]
-            \centering
-          }{
-            \endorigfigure
-          }
-          
-          % ========================================
-          % 4. 코드 블록 설정
-          % ========================================
-          \fvset{
-            breaklines=true,
-            breakanywhere=true,
-            breakautoindent=false,
-            breaksymbolleft={},
-            breaksymbolright={},
-            fontsize=\tiny,
-            baselinestretch=0.8
-          }
-          
-          \DefineVerbatimEnvironment{Highlighting}{Verbatim}{
-            breaklines=true,
-            breakanywhere=true,
-            breakautoindent=false,
-            breaksymbolleft={},
-            breaksymbolright={},
-            commandchars=\\\{\},
-            fontsize=\tiny,
-            baselinestretch=0.8
-          }
-          
-          \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
-            breaklines=true,
-            breakanywhere=true,
-            breakautoindent=false,
-            breaksymbolleft={},
-            breaksymbolright={},
-            fontsize=\tiny,
-            baselinestretch=0.8
-          }
-          
-          % ========================================
-          % 5. 인라인 코드 줄바꿈
-          % ========================================
-          \def\UrlBreaks{\do\/\do:\do-\do_\do.\do,\do*\do(\do)\do[\do]\do<\do>\do|\do'\do$\do=\do\{\do\}\do;\do"}
-          
-          \makeatletter
-          \let\oldtexttt\texttt
-          \renewcommand{\texttt}[1]{%
-            \begingroup
-            \tiny
-            \hyphenchar\font=`\-
-            \oldtexttt{%
-              \begingroup
-              \lccode`~=`.\lowercase{\endgroup\def~}{.\discretionary{}{}{}}%
-              \lccode`~=`*\lowercase{\endgroup\def~}{*\discretionary{}{}{}}%
-              \lccode`~=`:\lowercase{\endgroup\def~}{:\discretionary{}{}{}}%
-              \lccode`~=`_\lowercase{\endgroup\def~}{_\discretionary{}{}{}}%
-              \lccode`~=`-\lowercase{\endgroup\def~}{-\discretionary{}{}{}}%
-              \lccode`~=`/\lowercase{\endgroup\def~}{/\discretionary{}{}{}}%
-              \lccode`~=`(\lowercase{\endgroup\def~}{(\discretionary{}{}{}}%
-              \lccode`~=`)\lowercase{\endgroup\def~}{)\discretionary{}{}{}}%
-              \lccode`~=`[\lowercase{\endgroup\def~}{[\discretionary{}{}{}}%
-              \lccode`~=`]\lowercase{\endgroup\def~}{]\discretionary{}{}{}}%
-              \lccode`~=`'\lowercase{\endgroup\def~}{'\discretionary{}{}{}}%
-              \lccode`~=`$\lowercase{\endgroup\def~}{\$\discretionary{}{}{}}%
-              \lccode`~=`=\lowercase{\endgroup\def~}{=\discretionary{}{}{}}%
-              \lccode`~=`,\lowercase{\endgroup\def~}{,\discretionary{}{}{}}%
-              \lccode`~=`;\lowercase{\endgroup\def~}{;\discretionary{}{}{}}%
-              \lccode`~=`"\lowercase{\endgroup\def~}{"\discretionary{}{}{}}%
-              \catcode`.=\active \catcode`*=\active \catcode`:=\active
-              \catcode`_=\active \catcode`-=\active \catcode`/=\active
-              \catcode`(=\active \catcode`)=\active \catcode`[=\active
-              \catcode`]=\active \catcode`'=\active \catcode`$=\active
-              \catcode`==\active \catcode`,=\active \catcode`;=\active
-              \catcode`"=\active
-              \scantokens{#1\noexpand}%
-            }%
-            \endgroup
-          }
-          \makeatother
-          
-          % ========================================
-          % 6. 페이지 레이아웃 최적화
-          % ========================================
-          \usepackage{microtype}
-          \usepackage[hang,flushmargin]{footmisc}
-          
-          \setlength{\parskip}{0.3\baselineskip}
-          \setlength{\parindent}{0pt}
-          
-          \widowpenalty=10000
-          \clubpenalty=10000
-          \raggedbottom
-          
-          \tolerance=9999
-          \emergencystretch=3em
-          \hyphenpenalty=10000
-          \exhyphenpenalty=100
-          EOFHEADER
-          
-          echo "✅ LaTeX header created"
-          ls -lh header.tex
-
-      - name: Generate PDF with Pandoc
-        run: |
-          cd wiki
-          echo "📄 Generating PDF..."
           fc-cache -fv
-          
+          echo "📝 설치된 Noto 폰트:"
+          fc-list | grep -i "noto.*cjk.*kr" | cut -d: -f2 | sort -u
           pandoc combined.md \
             --pdf-engine=xelatex \
-            --listings \
-            -V fontsize=9pt \
-            -V geometry:margin=1cm \
-            -V geometry:top=1.5cm \
-            -V geometry:bottom=1.5cm \
-            -V linestretch=1.1 \
+            -V 'mainfont:Noto Sans CJK KR' \
+            -V 'sansfont:Noto Sans CJK KR' \
+            -V 'monofont:Noto Sans Mono CJK KR' \
+            -V 'CJKmainfont:Noto Sans CJK KR' \
+            -V fontsize=11pt \
+            -V geometry:margin=1.5cm \
+            -V linestretch=1.3 \
             -V documentclass=article \
+            -V 'verbatimfont={\fontsize{1pt}{1pt}\selectfont}' \
             --toc \
             --toc-depth=3 \
-            -H header.tex \
             -o combined.pdf
-          
-          if [ -f combined.pdf ]; then
-            echo "✅ PDF generated successfully"
-            ls -lh combined.pdf
-          else
-            echo "❌ PDF generation failed"
-            exit 1
-          fi
 
       - name: Commit PDF to repository
         run: |
@@ -287,9 +106,6 @@ jobs:
           if ! git diff --staged --quiet; then
             git commit -m "📄 Update Wiki PDF"
             git push origin HEAD
-            echo "✅ PDF committed and pushed"
-          else
-            echo "ℹ️ No changes to PDF"
           fi
 
       - name: Update Home.md with PDF link
@@ -298,13 +114,9 @@ jobs:
           PDF_URL_RAW="https://github.com/GiveSeo/Wiki_drag_and_drop/raw/master/Wiki_전체.pdf"
           PDF_URL_BLOB="https://github.com/GiveSeo/Wiki_drag_and_drop/blob/master/Wiki_전체.pdf"
           HOME_FILE="Home.md"
-          
           if grep -q "## 📘 PDF 다운로드" "$HOME_FILE"; then
-            sed -i '/## 📘 PDF 다운로드/,/^$/d' "$HOME_FILE"
+            sed -i '/## 📘 PDF 다운로드/,/^## /{ /^## 📘 PDF 다운로드/d; /^## /!d; }' "$HOME_FILE"
           fi
-          
-          echo "" >> "$HOME_FILE"
-          echo "---" >> "$HOME_FILE"
           echo "" >> "$HOME_FILE"
           echo "## 📘 PDF 다운로드" >> "$HOME_FILE"
           echo "" >> "$HOME_FILE"
@@ -312,14 +124,9 @@ jobs:
           echo "" >> "$HOME_FILE"
           echo "- [📥 PDF 다운로드 (Raw)]($PDF_URL_RAW)" >> "$HOME_FILE"
           echo "- [👁️ GitHub에서 보기]($PDF_URL_BLOB)" >> "$HOME_FILE"
-          echo "" >> "$HOME_FILE"
-          
           git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/GiveSeo/Wiki_drag_and_drop.wiki.git
           git add "$HOME_FILE"
           if ! git diff --staged --quiet; then
             git commit -m "🔗 Update PDF download link"
             git push origin HEAD:master
-            echo "✅ Home.md updated"
-          else
-            echo "ℹ️ No changes to Home.md"
           fi
