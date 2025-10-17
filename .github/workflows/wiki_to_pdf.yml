@@ -81,15 +81,25 @@ jobs:
           fc-list | grep -i "noto.*cjk.*kr" | cut -d: -f2 | sort -u
           pandoc combined.md \
             --pdf-engine=xelatex \
-            -V 'mainfont=Noto Sans CJK KR' \
-            -V 'sansfont=Noto Sans CJK KR' \
-            -V 'monofont=Noto Sans Mono CJK KR' \
-            -V 'CJKmainfont=Noto Sans CJK KR' \
+            -V 'mainfont:Noto Sans CJK KR:fontsize=1' \
+            -V 'sansfont:Noto Sans CJK KR:fontsize=1' \
+            -V 'monofont:Noto Sans Mono CJK KR:fontsize=1' \
+            -V 'CJKmainfont:Noto Sans CJK KR:fontsize=1' \
             -V fontsize=1pt \
             -V geometry:margin=1.5cm \
             -V linestretch=1.0 \
             -V documentclass=article \
-            -V 'verbatimfont={\fontsize{1pt}{1pt}\selectfont}' \
+            -V 'header-includes=\usepackage{fontspec}\setmainfont[FontSize=1pt]{Noto Sans CJK KR}\setsansfont[FontSize=1pt]{Noto Sans CJK KR}\setmonofont[FontSize=1pt]{Noto Sans Mono CJK KR}' \
+            -V 'header-includes=\renewcommand{\normalsize}{\fontsize{1pt}{1.2pt}\selectfont}' \
+            -V 'header-includes=\renewcommand{\small}{\fontsize{1pt}{1.2pt}\selectfont}' \
+            -V 'header-includes=\renewcommand{\footnotesize}{\fontsize{1pt}{1.2pt}\selectfont}' \
+            -V 'header-includes=\renewcommand{\scriptsize}{\fontsize{1pt}{1.2pt}\selectfont}' \
+            -V 'header-includes=\renewcommand{\tiny}{\fontsize{1pt}{1.2pt}\selectfont}' \
+            -V 'header-includes=\renewcommand{\large}{\fontsize{1pt}{1.2pt}\selectfont}' \
+            -V 'header-includes=\renewcommand{\Large}{\fontsize{1pt}{1.2pt}\selectfont}' \
+            -V 'header-includes=\renewcommand{\LARGE}{\fontsize{1pt}{1.2pt}\selectfont}' \
+            -V 'header-includes=\renewcommand{\huge}{\fontsize{1pt}{1.2pt}\selectfont}' \
+            -V 'header-includes=\renewcommand{\Huge}{\fontsize{1pt}{1.2pt}\selectfont}' \
             --toc \
             --toc-depth=3 \
             -o combined.pdf
@@ -115,7 +125,7 @@ jobs:
           PDF_URL_BLOB="https://github.com/GiveSeo/Wiki_drag_and_drop/blob/master/Wiki_전체.pdf"
           HOME_FILE="Home.md"
           if grep -q "## 📘 PDF 다운로드" "$HOME_FILE"; then
-            sed -i '/## 📘 PDF 다운로드/,/^## /{ /^## 📘 PDF 다운로드/d; /^## /!d; }' "$HOME_FILE"
+            sed -i '/## 📘 PDF 다운로드/,/^## /{ /^## 📘 PDF 다운로드/!d; }' "$HOME_FILE"
           fi
           echo "" >> "$HOME_FILE"
           echo "## 📘 PDF 다운로드" >> "$HOME_FILE"
