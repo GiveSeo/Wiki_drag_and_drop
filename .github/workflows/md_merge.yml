@@ -1,23 +1,23 @@
-name: Merge Selected Wiki to PDF
+name: Merge Selected Wiki Markdown Files
 
 on:
   schedule:
     - cron: '0 15 * * *'  # 매일 한국시간 0시에 실행 (UTC 15:00)
   workflow_dispatch:       # 수동 실행
-  repository_dispatch:     # 외부 트리거 (예: wiki 수정 감지)
+  repository_dispatch:     # 외부 이벤트 (wiki 수정 시 트리거)
     types: [wiki-updated]
 
 env:
   REPO_OWNER: GiveSeo
   REPO_NAME: Wiki_drag_and_drop
   WIKI_REPO_NAME: Wiki_drag_and_drop.wiki
-  PDF_FILENAME: Wiki_ALL.pdf
+  MERGED_FILENAME: 기본_블록.md
   COMMITTER_NAME: github-actions[bot]
   COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
   BRANCH: main
 
 jobs:
-  merge_and_convert:
+  merge_wiki_files:
     runs-on: ubuntu-latest
 
     steps:
@@ -49,28 +49,20 @@ jobs:
             "제어.md"
           )
 
-          echo "# Wiki 합본" > ../wiki_combined.md
+          echo "# Wiki 합본" > ../${{ env.MERGED_FILENAME }}
           for file in "${FILES[@]}"; do
             if [ -f "$file" ]; then
-              echo -e "\n\n---\n## ${file%.*}\n" >> ../wiki_combined.md
-              cat "$file" >> ../wiki_combined.md
+              echo -e "\n\n---\n## ${file%.*}\n" >> ../${{ env.MERGED_FILENAME }}
+              cat "$file" >> ../${{ env.MERGED_FILENAME }}
             else
-              echo "⚠️ 파일 없음: $file"
+              echo "파일 없음: $file"
             fi
           done
 
-      - name: Install pandoc
-        run: sudo apt-get update && sudo apt-get install -y pandoc
-
-      - name: Convert merged markdown to PDF
-        run: |
-          pandoc wiki_combined.md -o ${{ env.PDF_FILENAME }} --pdf-engine=xelatex
-          ls -lh ${{ env.PDF_FILENAME }}
-
-      - name: Commit and push PDF to main branch
+      - name: Commit and push merged markdown
         run: |
           git config user.name "${{ env.COMMITTER_NAME }}"
           git config user.email "${{ env.COMMITTER_EMAIL }}"
-          git add ${{ env.PDF_FILENAME }} wiki_combined.md
-          git commit -m "Auto-update: merged selected wiki files and generated PDF" || echo "No changes"
+          git add ${{ env.MERGED_FILENAME }}
+          git commit -m "Auto-merge selected wiki markdown files" || echo "No changes"
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}.git ${{ env.BRANCH }}
